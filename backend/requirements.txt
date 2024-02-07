@@ -1,0 +1,10 @@
+Flask==3.0.0
+Werkzeug
+python-dotenv==1.0.0
+gunicorn
+Flask-CORS
+openai
+langchain
+langchain-openai
+Flask-PyMongo
+bcrypt

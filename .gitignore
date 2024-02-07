@@ -1,0 +1,5 @@
+# .gitignore
+*.env
+fixture/
+
+backend/app/__pycache__/

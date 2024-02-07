@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+    volumes:
+      - ./frontend:/frontend:rw
+    environment:
+      - REACT_APP_APP=DEV
+      - REACT_APP_DEV_API_URL=${REACT_APP_DEV_API_URL}
+      - WATCHPACK_POLLING=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://frontend:3000"]
+      interval: 10s
+      timeout: 10s
+      start_period: 30s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        DOCKER_ENV: development
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/backend:rw
+    environment:
+      - DOCKER_ENV=development
+      - FLASK_ENV=${DEV_FLASK_ENV}
+      - OPENAI_API_KEY=${DEV_OPENAI_API_KEY}
+      - PYTHONPATH=/backend/app # root of Flask app
+      - MONGO_URL=${DEV_MONGO_URL}
+    env_file:
+      - ./backend/.env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://backend:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ${DEV_NGINX_CONF}:/etc/nginx/nginx.conf:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - ${DEV_MONGODB_VOLUME_PATH}:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DEV_MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DEV_MONGO_INITDB_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+volumes:
+  mongodb_data:
